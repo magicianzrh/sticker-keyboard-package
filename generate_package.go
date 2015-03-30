@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 
 	"path/filepath"
@@ -62,30 +63,7 @@ func main() {
 	}
 	list_image()
 
-	size_check := ""
-	sticker_package := new(StickerPackage)
-	sticker_package.Title = os.Args[1]
-	sticker_package.Stickers = map[string]string{}
-	for f_name, md5_list := range image_map {
-		sticker_package.Stickers[f_name] = md5_list[1]
-		size_check += md5_list[0]
-	}
-	size_check = md5str(size_check)
-	sticker_package.SizeCheck = size_check
-
-	b, err := json.Marshal(&sticker_package)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(b))
-
-	fi, err := os.Create(base_path + "/" + PACKAGE_NAME)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fi.WriteString(string(b))
-	fi.Sync()
-	fi.Close()
+	to_json()
 }
 
 func list_image() {
@@ -145,4 +123,42 @@ func md5str(data string) string {
 	io.WriteString(t, data)
 
 	return fmt.Sprintf("%x", t.Sum(nil))
+}
+
+func to_json() {
+	size_check := ""
+	sticker_package := new(StickerPackage)
+	sticker_package.Title = os.Args[1]
+	sticker_package.Stickers = map[string]string{}
+
+	keys := make([]string, len(image_map))
+	i := 0
+	for f_name, _ := range image_map {
+		keys[i] = f_name
+		i++
+	}
+	sort.Strings(keys)
+
+	for _, f_name := range keys {
+		md5_list := image_map[f_name]
+		sticker_package.Stickers[f_name] = md5_list[1]
+		size_check += md5_list[0]
+	}
+
+	size_check = md5str(size_check)
+	sticker_package.SizeCheck = size_check
+
+	b, err := json.Marshal(&sticker_package)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(b))
+
+	fi, err := os.Create(base_path + "/" + PACKAGE_NAME)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fi.WriteString(string(b))
+	fi.Sync()
+	fi.Close()
 }
