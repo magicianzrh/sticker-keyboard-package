@@ -9,12 +9,12 @@
  * 	simple package
  * 	{
  * 		"title":"Same Sticker",
- * 		"size_check":"md5 string",
- * 		"stickers":[
- * 						"1.png",//only support one level folder
- * 						"2.png"
- * 					]
- *
+ * 		"size_check":"md5(concat(md5(file size)))",
+ * 		"stickers":{
+ * 						//only support one level folder
+ * 						"1.png":"md5 value",
+ * 						"2.png":"md5 value"
+ * 					}
  * 	}
  */
 package main
@@ -36,16 +36,16 @@ var base_path string
 
 var package_title_str string
 
-var image_map map[string]string
+var image_map map[string][]string
 
 const PACKAGE_NAME string = "sticker_package.json"
 
 var support_img_format_list = []string{".png", "jpg", "gif", ".bmp"}
 
 type StickerPackage struct {
-	Title     string   `json:"title"`
-	SizeCheck string   `json:"size_check"`
-	Stickers  []string `json:"stickers"`
+	Title     string            `json:"title"`
+	SizeCheck string            `json:"size_check"`
+	Stickers  map[string]string `json:"stickers"`
 }
 
 func main() {
@@ -64,10 +64,11 @@ func main() {
 
 	size_check := ""
 	sticker_package := new(StickerPackage)
-	sticker_package.Stickers = make([]string, 0)
-	for f_name, md5_str := range image_map {
-		sticker_package.Stickers = append(sticker_package.Stickers, f_name)
-		size_check += md5_str
+	sticker_package.Title = os.Args[1]
+	sticker_package.Stickers = map[string]string{}
+	for f_name, md5_list := range image_map {
+		sticker_package.Stickers[f_name] = md5_list[1]
+		size_check += md5_list[0]
 	}
 	size_check = md5str(size_check)
 	sticker_package.SizeCheck = size_check
@@ -93,7 +94,7 @@ func list_image() {
 		log.Fatal(err)
 	}
 
-	image_map = make(map[string]string)
+	image_map = map[string][]string{}
 	for _, f := range list {
 		if !f.IsDir() {
 			ext_str := filepath.Ext(f.Name())
@@ -104,8 +105,10 @@ func list_image() {
 						log.Fatal(err)
 					}
 					if img_format(fi) == ext_str {
-
-						image_map[f.Name()] = md5str(strconv.FormatInt(f.Size(), 10))
+						file_md5 := md5.New()
+						io.Copy(file_md5, fi)
+						fild_md5_str := fmt.Sprintf("%x", file_md5.Sum(nil))
+						image_map[f.Name()] = []string{md5str(strconv.FormatInt(f.Size(), 10)), fild_md5_str}
 					} else {
 						fmt.Println(f.Name() + " format may error")
 					}
