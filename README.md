@@ -5,4 +5,4 @@
 > source code generate_package.go
 
 - Sticker
-> all sample stickers in https://ohsame.com/
+> all image file in this folder
